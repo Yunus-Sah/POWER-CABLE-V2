@@ -521,6 +521,7 @@ class ServerCallbacks : public BLEServerCallbacks {
 };
 
 class ReceiveCallbacks : public BLECharacteristicCallbacks {
+  // Command-handling code
   public:
     void processCommand(String command) {
       command.trim();
@@ -642,21 +643,21 @@ class ReceiveCallbacks : public BLECharacteristicCallbacks {
     }
   }
     void onWrite(
-    BLECharacteristic* characteristic
-  ) override {
-    String command =
-      characteristic->getValue().c_str();
+      BLECharacteristic* characteristic
+    ) override {
+      String command =
+        characteristic->getValue().c_str();
 
-    processCommand(command);
+      processCommand(command);
   }
 };
+ReceiveCallbacks* receiveCallbacks = nullptr;
 
 void startWebServer() {
+  // Wi-Fi server code
   WiFi.mode(WIFI_AP);
 
-  bool accessPointStarted = WiFi.softAP(
-    WIFI_AP_NAME,
-  );
+  bool accessPointStarted = WiFi.softAP(WIFI_AP_NAME);
 
   if (!accessPointStarted) {
     Serial.println("Wi-Fi access point failed");
@@ -801,6 +802,7 @@ webServer.on("/api/command", HTTP_POST, []() {
 }
 
 void setup() {
+  // Setup code
   Serial.begin(115200);
   delay(1000);
 
