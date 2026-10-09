@@ -1,4 +1,6 @@
 #include <Arduino.h>
+#include <WiFi.h>
+#include <WebServer.h>
 #include <BLEDevice.h>
 #include <BLEServer.h>
 #include <BLEUtils.h>
@@ -42,6 +44,11 @@ HardwareSerial ODriveSerial(1);
 
 BLEServer* bleServer = nullptr;
 BLECharacteristic* txCharacteristic = nullptr;
+
+// Local Wi-Fi network created by the ESP32
+const char* WIFI_AP_NAME = "POWER-CABLE";
+
+WebServer webServer(80);
 
 bool bluetoothConnected = false;
 bool previousConnection = false;
@@ -627,6 +634,60 @@ class ReceiveCallbacks : public BLECharacteristicCallbacks {
   }
 };
 
+void startWebServer() {
+  WiFi.mode(WIFI_AP);
+
+  bool accessPointStarted = WiFi.softAP(
+    WIFI_AP_NAME,
+  );
+
+  if (!accessPointStarted) {
+    Serial.println("Wi-Fi access point failed");
+    return;
+  }
+
+  webServer.on("/", HTTP_GET, []() {
+    webServer.send(
+      200,
+      "text/plain",
+      "POWER CABLE ESP32"
+    );
+  });
+
+  webServer.on("/api/status", HTTP_GET, []() {
+    String json = "{";
+
+    json += "\"online\":true,";
+
+    json += "\"trainingActive\":";
+    json += (trainingActive ? "true" : "false");
+
+    json += ",\"returnActive\":";
+    json += (returnActive ? "true" : "false");
+
+    json += ",\"selectedWeightKg\":";
+    json += String(selectedWeightKg, 1);
+
+    json += "}";
+
+    webServer.sendHeader(
+      "Access-Control-Allow-Origin",
+      "*"
+    );
+
+    webServer.send(
+      200,
+      "application/json",
+      json
+    );
+  });
+
+  webServer.begin();
+
+  Serial.print("POWER-CABLE Wi-Fi address: ");
+  Serial.println(WiFi.softAPIP());
+}
+
 void setup() {
   Serial.begin(115200);
   delay(1000);
@@ -668,12 +729,14 @@ void setup() {
   advertising->addServiceUUID(SERVICE_UUID);
   advertising->setScanResponse(true);
   advertising->start();
+  startWebServer();
 
   Serial.println("Bluetooth ready");
   Serial.println("Waiting for the WeightLifting app");
 }
 
 void loop() {
+  webServer.handleClient();
   // Hard time limit for every jog, independent of the phone connection.
   if (jogActive && millis() - jogStartTime >= SAFE_JOG_TIME_MS) {
     stopMotor(true);

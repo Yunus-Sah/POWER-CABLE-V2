@@ -1,0 +1,5 @@
+# macOS temporary files
+.DS_Store
+
+# Personal Xcode settings and breakpoints
+**/xcuserdata/
