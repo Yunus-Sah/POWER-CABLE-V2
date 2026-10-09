@@ -50,6 +50,11 @@ const char* WIFI_AP_NAME = "POWER-CABLE";
 
 WebServer webServer(80);
 
+String latestDeviceMessage = "STARTING";
+
+float latestCablePositionCm = 0.0f;
+float latestCableVelocityCmPerSecond = 0.0f;
+
 bool bluetoothConnected = false;
 bool previousConnection = false;
 bool safeJogAllowed = false;
@@ -87,6 +92,7 @@ unsigned long requestStartTime = 0;
 String odriveResponse = "";
 
 void sendToApp(const String& message) {
+  latestDeviceMessage = message;
   Serial.println(message);
 
   if (bluetoothConnected && txCharacteristic != nullptr) {
@@ -413,6 +419,9 @@ if (completedRequest == REQUEST_TRAINING_FEEDBACK) {
   ) {
     cableVelocityCmPerSecond = 0.0f;
   }
+  latestCablePositionCm = cablePositionCm;
+  latestCableVelocityCmPerSecond =
+   cableVelocityCmPerSecond;
 
   sendToApp(
     "CABLE_FEEDBACK: " +
@@ -512,9 +521,9 @@ class ServerCallbacks : public BLEServerCallbacks {
 };
 
 class ReceiveCallbacks : public BLECharacteristicCallbacks {
-  void onWrite(BLECharacteristic* characteristic) override {
-    String command = characteristic->getValue().c_str();
-    command.trim();
+  public:
+    void processCommand(String command) {
+      command.trim();
 
     Serial.print("App command: ");
     Serial.println(command);
@@ -632,6 +641,14 @@ class ReceiveCallbacks : public BLECharacteristicCallbacks {
       sendToApp("UNKNOWN_COMMAND");
     }
   }
+    void onWrite(
+    BLECharacteristic* characteristic
+  ) override {
+    String command =
+      characteristic->getValue().c_str();
+
+    processCommand(command);
+  }
 };
 
 void startWebServer() {
@@ -655,32 +672,127 @@ void startWebServer() {
   });
 
   webServer.on("/api/status", HTTP_GET, []() {
-    String json = "{";
+  String json = "{";
 
-    json += "\"online\":true,";
+  json += "\"online\":true,";
 
-    json += "\"trainingActive\":";
-    json += (trainingActive ? "true" : "false");
+  json += "\"trainingActive\":";
+  json += (trainingActive ? "true" : "false");
 
-    json += ",\"returnActive\":";
-    json += (returnActive ? "true" : "false");
+  json += ",\"returnActive\":";
+  json += (returnActive ? "true" : "false");
 
-    json += ",\"selectedWeightKg\":";
-    json += String(selectedWeightKg, 1);
+  json += ",\"ready\":";
+  json += (safeJogAllowed ? "true" : "false");
 
-    json += "}";
+  json += ",\"selectedWeightKg\":";
+  json += String(selectedWeightKg, 1);
 
-    webServer.sendHeader(
-      "Access-Control-Allow-Origin",
-      "*"
-    );
+  json += ",\"cablePositionCm\":";
+  json += String(latestCablePositionCm, 2);
 
-    webServer.send(
-      200,
-      "application/json",
-      json
-    );
+  json += ",\"cableVelocityCmPerSecond\":";
+  json += String(
+    latestCableVelocityCmPerSecond,
+    2
+  );
+
+  json += ",\"message\":\"";
+  json += latestDeviceMessage;
+  json += "\"";
+
+  json += "}";
+
+  webServer.sendHeader(
+    "Access-Control-Allow-Origin",
+    "*"
+  );
+
+  webServer.send(
+    200,
+    "application/json",
+    json
+  );
   });
+
+  webServer.on("/api/command", HTTP_OPTIONS, []() {
+  webServer.sendHeader(
+    "Access-Control-Allow-Origin",
+    "*"
+  );
+
+  webServer.sendHeader(
+    "Access-Control-Allow-Methods",
+    "POST, OPTIONS"
+  );
+
+  webServer.sendHeader(
+    "Access-Control-Allow-Headers",
+    "Content-Type"
+  );
+
+  webServer.send(
+    204,
+    "text/plain",
+    ""
+  );
+});
+
+webServer.on("/api/command", HTTP_POST, []() {
+  String command = webServer.arg("plain");
+  command.trim();
+
+  webServer.sendHeader(
+    "Access-Control-Allow-Origin",
+    "*"
+  );
+
+  if (command.length() == 0) {
+    webServer.send(
+      400,
+      "application/json",
+      "{\"accepted\":false,\"error\":\"EMPTY_COMMAND\"}"
+    );
+    return;
+  }
+
+  bool commandAllowed =
+    command.startsWith("SET_KG:") ||
+    command.startsWith("NEXT_SET:") ||
+    command == "READ_ERROR" ||
+    command == "MOTOR_ON" ||
+    command == "MOTOR_OFF" ||
+    command == "FINISH_SET" ||
+    command == "RETURN_TO_START" ||
+    command == "SET_NEW_START" ||
+    command == "PING";
+
+  if (!commandAllowed) {
+    webServer.send(
+      403,
+      "application/json",
+      "{\"accepted\":false,\"error\":\"COMMAND_NOT_ALLOWED\"}"
+    );
+    return;
+  }
+
+  if (receiveCallbacks == nullptr) {
+    webServer.send(
+      503,
+      "application/json",
+      "{\"accepted\":false,\"error\":\"CONTROLLER_NOT_READY\"}"
+    );
+    return;
+  }
+
+  receiveCallbacks->processCommand(command);
+
+  webServer.send(
+    202,
+    "application/json",
+    "{\"accepted\":true}"
+  );
+});
 
   webServer.begin();
 
@@ -721,7 +833,9 @@ void setup() {
     service->createCharacteristic(
       RX_CHARACTERISTIC,
       BLECharacteristic::PROPERTY_WRITE);
-  rxCharacteristic->setCallbacks(new ReceiveCallbacks());
+  receiveCallbacks = new ReceiveCallbacks();
+
+  rxCharacteristic->setCallbacks(receiveCallbacks);
 
   service->start();
 
