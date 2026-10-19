@@ -14,9 +14,11 @@
 </p>
 
 <p align="center">
+  <a href="#my-contribution">My contribution</a> ·
   <a href="#the-problem">The problem</a> ·
   <a href="#how-it-works">How it works</a> ·
   <a href="#user-interfaces">Interfaces</a> ·
+  <a href="#prototype-in-action">Demo</a> ·
   <a href="#repository-guide">Repository</a> ·
   <a href="#getting-started">Get started</a>
 </p>
@@ -24,6 +26,23 @@
 <p align="center">
   <img src="pictures/3dModell-PowerCable.png" alt="POWER CABLE prototype design" width="720">
 </p>
+
+<a id="my-contribution"></a>
+## 👨‍💻 My contribution
+
+POWER CABLE V2 was developed as a group project at KTH Royal Institute of Technology. My main responsibility was turning the physical prototype into a connected training system with practical user interfaces.
+
+I contributed:
+
+- A native **SwiftUI iPhone application** communicating with the ESP32-C3 over Bluetooth Low Energy
+- A browser-based **training dashboard** served directly by the ESP32 over its local Wi-Fi network
+- Interface controls for calibration, workout configuration, training, emergency motor stop and cable return
+- Live visualization of repetitions, set progress, set time, cable speed and repetition measurements
+- Audio and spoken workout feedback in the iOS application
+- Next-set recommendations based on velocity loss
+- Firmware integration, communication testing and debugging across the ESP32, ODrive, iOS app and web dashboard
+
+The complete group repository, including the other team members' hardware, adaptive-resistance and validation work, is available at [amsimer/Weightlifting-project](https://github.com/amsimer/Weightlifting-project).
 
 <a id="the-problem"></a>
 ## 🎯 The problem
@@ -93,6 +112,32 @@ Source: [`V2/Firmware`](V2/Firmware)
 
 </details>
 
+<a id="prototype-in-action"></a>
+## 🎥 Prototype in action
+
+The interfaces below were recorded during real training sessions. Select either screenshot to open the corresponding screen recording.
+
+<p align="center">
+  <a href="docs/media/demos/ios-app-recording.mp4">
+    <img src="docs/images/readme/ios-training-dashboard.png" alt="iOS application displaying live workout measurements" height="480">
+  </a>
+  &nbsp;&nbsp;
+  <a href="docs/media/demos/web-dashboard-recording.mov">
+    <img src="docs/images/readme/web-training-dashboard.png" alt="Wi-Fi dashboard displaying live workout measurements" height="480">
+  </a>
+</p>
+
+<p align="center">
+  <strong>iOS app over Bluetooth</strong>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <strong>Web dashboard over local Wi-Fi</strong>
+</p>
+
+Physical prototype demonstrations:
+
+- [Training with the iOS application](docs/media/demos/ios-training-demo.mp4)
+- [Training with the Wi-Fi dashboard](docs/media/demos/web-training-demo.mp4)
+
 ## ✨ Current V2 functions
 
 - Select resistance, target repetitions and target sets
@@ -127,7 +172,7 @@ POWER-CABLE-V2/
 
 ### Firmware
 
-1. Open [`V2/Firmware/WeightLifting_ODrive_RepTracking.ino`](V2/Firmware/WeightLifting_ODrive_RepTracking.ino) in Arduino IDE.
+1. Open [`WeightLifting_ODrive_RepTracking.ino`](V2/Firmware/WeightLifting_ODrive_RepTracking/WeightLifting_ODrive_RepTracking.ino) in Arduino IDE.
 2. Install the ESP32 board package and select **ESP32C3 Dev Module**.
 3. Select the correct serial port and a partition scheme with enough application space.
 4. Verify the sketch, connect the prototype and upload it to the ESP32-C3.
