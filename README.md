@@ -65,6 +65,12 @@ flowchart LR
     M <--> C[Cable mechanism]
 ```
 
+<p align="center">
+  <img src="docs/images/readme/technical-approach-components.png" alt="Technical approach showing the iOS and web interfaces, ESP32-C3, ODrive, motor and encoder, and cable mechanism" width="100%">
+</p>
+
+<p align="center"><em>The complete control path shown with the main components used in the prototype.</em></p>
+
 1. The user calibrates the system and selects the weight, repetitions and sets.
 2. The ESP32-C3 translates the workout commands into ODrive motor-control commands.
 3. The motor resists the cable movement while the encoder measures position and velocity.
