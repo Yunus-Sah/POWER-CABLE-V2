@@ -1,4 +1,7 @@
+#include <LittleFS.h>
 #include <Arduino.h>
+#include <WiFi.h>
+#include <WebServer.h>
 #include <BLEDevice.h>
 #include <BLEServer.h>
 #include <BLEUtils.h>
@@ -9,7 +12,7 @@
 #define RX_CHARACTERISTIC   "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"
 #define TX_CHARACTERISTIC   "6E400003-B5A3-F393-E0A9-E50E24DCCA9E"
 
-// ESP32-C3 UART pins
+// ESP32-C3 UART pins/Users/yunus/Documents/Arduino/plugins/arduino-littlefs-upload-1.6.3.vsix
 const int ODRIVE_RX_PIN = 4;   // ESP32 receives from ODrive GPIO1 (TX)
 const int ODRIVE_TX_PIN = 21;  // ESP32 sends to ODrive GPIO2 (RX)
 
@@ -42,6 +45,17 @@ HardwareSerial ODriveSerial(1);
 
 BLEServer* bleServer = nullptr;
 BLECharacteristic* txCharacteristic = nullptr;
+
+// Local Wi-Fi network created by the ESP32
+const char* WIFI_AP_NAME = "POWER-CABLE";
+
+WebServer webServer(80);
+
+String latestDeviceMessage = "STARTING";
+
+float latestCablePositionCm = 0.0f;
+float latestCableVelocityCmPerSecond = 0.0f;
+unsigned long latestFeedbackSequence = 0;
 
 bool bluetoothConnected = false;
 bool previousConnection = false;
@@ -80,6 +94,7 @@ unsigned long requestStartTime = 0;
 String odriveResponse = "";
 
 void sendToApp(const String& message) {
+  latestDeviceMessage = message;
   Serial.println(message);
 
   if (bluetoothConnected && txCharacteristic != nullptr) {
@@ -406,6 +421,10 @@ if (completedRequest == REQUEST_TRAINING_FEEDBACK) {
   ) {
     cableVelocityCmPerSecond = 0.0f;
   }
+  latestCablePositionCm = cablePositionCm;
+  latestCableVelocityCmPerSecond =
+   cableVelocityCmPerSecond;
+   latestFeedbackSequence++;
 
   sendToApp(
     "CABLE_FEEDBACK: " +
@@ -505,9 +524,10 @@ class ServerCallbacks : public BLEServerCallbacks {
 };
 
 class ReceiveCallbacks : public BLECharacteristicCallbacks {
-  void onWrite(BLECharacteristic* characteristic) override {
-    String command = characteristic->getValue().c_str();
-    command.trim();
+  // Command-handling code
+  public:
+    void processCommand(String command) {
+      command.trim();
 
     Serial.print("App command: ");
     Serial.println(command);
@@ -600,6 +620,30 @@ class ReceiveCallbacks : public BLECharacteristicCallbacks {
   );
 }
 
+  else if (command.startsWith("SET_WORKOUT:")) {
+    float requestedKg = command.substring(12).toFloat();
+
+    if (
+      requestedKg < MIN_TRAINING_WEIGHT_KG ||
+      requestedKg > MAX_TRAINING_WEIGHT_KG
+    ) {
+      sendToApp("WORKOUT_BLOCKED: ALLOWED_RANGE_4_TO_30_KG");
+    } else {
+      // A new workout must capture its own cable start position.
+      // Combining this reset with the weight change gives the website
+      // one reliable, idempotent configuration request.
+      savedStartPositionValid = false;
+      selectedWeightKg = requestedKg;
+      selectedCurrentLimitA =
+        (requestedKg / 1.8f) - 0.6f;
+
+      sendToApp(
+        "WORKOUT_CONFIGURED: " +
+        String(selectedWeightKg, 1) +
+        " KG"
+      );
+    }
+  }
   else if (command.startsWith("SET_KG:")) {
     float requestedKg = command.substring(7).toFloat();
 
@@ -625,9 +669,209 @@ class ReceiveCallbacks : public BLECharacteristicCallbacks {
       sendToApp("UNKNOWN_COMMAND");
     }
   }
+    void onWrite(
+      BLECharacteristic* characteristic
+    ) override {
+      String command =
+        characteristic->getValue().c_str();
+
+      processCommand(command);
+  }
 };
+ReceiveCallbacks* receiveCallbacks = nullptr;
+
+void serveWebFile(
+  const char* path,
+  const char* contentType
+) {
+  File file = LittleFS.open(path, "r");
+
+  if (!file) {
+    webServer.send(
+      404,
+      "text/plain",
+      "Website file not found"
+    );
+    return;
+  }
+
+  webServer.streamFile(file, contentType);
+  file.close();
+}
+
+void startWebServer() {
+    if (!LittleFS.begin(false)) {
+      Serial.println("LittleFS could not be mounted");
+    } else {
+      Serial.println("LittleFS ready");
+    }
+  // Wi-Fi server code
+  WiFi.mode(WIFI_AP);
+
+  bool accessPointStarted = WiFi.softAP(WIFI_AP_NAME);
+
+  if (!accessPointStarted) {
+    Serial.println("Wi-Fi access point failed");
+    return;
+  }
+
+  webServer.on("/", HTTP_GET, []() {
+  serveWebFile(
+    "/index.html",
+    "text/html"
+  );
+});
+
+webServer.on("/style.css", HTTP_GET, []() {
+  serveWebFile(
+    "/style.css",
+    "text/css"
+  );
+});
+
+webServer.on("/app.js", HTTP_GET, []() {
+  serveWebFile(
+    "/app.js",
+    "application/javascript"
+  );
+});
+
+  webServer.on("/api/status", HTTP_GET, []() {
+  String json = "{";
+
+  json += "\"online\":true,";
+
+  json += "\"trainingActive\":";
+  json += (trainingActive ? "true" : "false");
+
+  json += ",\"returnActive\":";
+  json += (returnActive ? "true" : "false");
+
+  json += ",\"ready\":";
+  json += (safeJogAllowed ? "true" : "false");
+
+  json += ",\"selectedWeightKg\":";
+  json += String(selectedWeightKg, 1);
+
+  json += ",\"cablePositionCm\":";
+  json += String(latestCablePositionCm, 2);
+
+  json += ",\"cableVelocityCmPerSecond\":";
+  json += String(
+    latestCableVelocityCmPerSecond,
+    2
+  );
+
+  json += ",\"feedbackSequence\":";
+  json += String(latestFeedbackSequence);
+
+  json += ",\"message\":\"";
+  json += latestDeviceMessage;
+  json += "\"";
+
+  json += "}";
+
+  webServer.sendHeader(
+    "Access-Control-Allow-Origin",
+    "*"
+  );
+
+  webServer.send(
+    200,
+    "application/json",
+    json
+  );
+  });
+
+  webServer.on("/api/command", HTTP_OPTIONS, []() {
+  webServer.sendHeader(
+    "Access-Control-Allow-Origin",
+    "*"
+  );
+
+  webServer.sendHeader(
+    "Access-Control-Allow-Methods",
+    "POST, OPTIONS"
+  );
+
+  webServer.sendHeader(
+    "Access-Control-Allow-Headers",
+    "Content-Type"
+  );
+
+  webServer.send(
+    204,
+    "text/plain",
+    ""
+  );
+});
+
+webServer.on("/api/command", HTTP_POST, []() {
+  String command = webServer.arg("plain");
+  command.trim();
+
+  webServer.sendHeader(
+    "Access-Control-Allow-Origin",
+    "*"
+  );
+
+  if (command.length() == 0) {
+    webServer.send(
+      400,
+      "application/json",
+      "{\"accepted\":false,\"error\":\"EMPTY_COMMAND\"}"
+    );
+    return;
+  }
+
+  bool commandAllowed =
+    command.startsWith("SET_WORKOUT:") ||
+    command.startsWith("SET_KG:") ||
+    command.startsWith("NEXT_SET:") ||
+    command == "READ_ERROR" ||
+    command == "CALIBRATE_AXIS1" ||
+    command == "MOTOR_ON" ||
+    command == "MOTOR_OFF" ||
+    command == "FINISH_SET" ||
+    command == "RETURN_TO_START" ||
+    command == "SET_NEW_START" ||
+    command == "PING";
+
+  if (!commandAllowed) {
+    webServer.send(
+      403,
+      "application/json",
+      "{\"accepted\":false,\"error\":\"COMMAND_NOT_ALLOWED\"}"
+    );
+    return;
+  }
+
+  if (receiveCallbacks == nullptr) {
+    webServer.send(
+      503,
+      "application/json",
+      "{\"accepted\":false,\"error\":\"CONTROLLER_NOT_READY\"}"
+    );
+    return;
+  }
+
+  receiveCallbacks->processCommand(command);
+
+  webServer.send(
+    202,
+    "application/json",
+    "{\"accepted\":true}"
+  );
+});
+
+  webServer.begin();
+
+  Serial.print("POWER-CABLE Wi-Fi address: ");
+  Serial.println(WiFi.softAPIP());
+}
 
 void setup() {
+  // Setup code
   Serial.begin(115200);
   delay(1000);
 
@@ -660,7 +904,9 @@ void setup() {
     service->createCharacteristic(
       RX_CHARACTERISTIC,
       BLECharacteristic::PROPERTY_WRITE);
-  rxCharacteristic->setCallbacks(new ReceiveCallbacks());
+  receiveCallbacks = new ReceiveCallbacks();
+
+  rxCharacteristic->setCallbacks(receiveCallbacks);
 
   service->start();
 
@@ -668,12 +914,14 @@ void setup() {
   advertising->addServiceUUID(SERVICE_UUID);
   advertising->setScanResponse(true);
   advertising->start();
+  startWebServer();
 
   Serial.println("Bluetooth ready");
   Serial.println("Waiting for the WeightLifting app");
 }
 
 void loop() {
+  webServer.handleClient();
   // Hard time limit for every jog, independent of the phone connection.
   if (jogActive && millis() - jogStartTime >= SAFE_JOG_TIME_MS) {
     stopMotor(true);

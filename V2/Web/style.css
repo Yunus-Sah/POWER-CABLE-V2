@@ -1,11 +1,11 @@
 :root {
     color-scheme: dark;
 
-    --background: #050709;
-    --panel: #11161c;
-    --panel-border: #27313b;
-    --text: #f5f7fa;
-    --secondary-text: #9ba6b2;
+    --background: #3b4c5c;
+    --panel: #202a34;
+    --panel-border: #607181;
+    --text: #f2f6f9;
+    --secondary-text: #b1bfcb;
     --blue: #0a9cff;
     --blue-hover: #38afff;
     --green: #2bd96b;
@@ -22,8 +22,7 @@ body {
     padding: 24px;
 
     background:
-        radial-gradient(circle at top, #102234 0%, var(--background) 45%);
-
+    radial-gradient(circle at top, #667a8c 0%, var(--background) 48%, #2d3b47 100%);
     color: var(--text);
 
     font-family:
@@ -92,8 +91,8 @@ h1 {
     border: 1px solid var(--panel-border);
     border-radius: 20px;
 
-    background: rgb(17 22 28 / 92%);
-    box-shadow: 0 18px 45px rgb(0 0 0 / 30%);
+    background: rgb(32 42 52 / 96%);
+    box-shadow: 0 18px 45px rgb(8 18 26 / 25%);
 }
 
 .panel h2 {
@@ -148,7 +147,7 @@ input[type="number"] {
     border: 1px solid var(--panel-border);
     border-radius: 10px;
 
-    background: #080c10;
+    background: #17212a;
     color: var(--text);
     text-align: center;
 }
@@ -264,7 +263,7 @@ input:focus-visible {
 
     border: 1px solid var(--panel-border);
     border-radius: 16px;
-    background: #090e13;
+    background: #17212a;
 }
 
 .workout-progress span {
@@ -380,7 +379,7 @@ input:focus-visible {
 
     border: 1px solid var(--panel-border);
     border-radius: 16px;
-    background: #090e13;
+    background: #17212a;
 }
 
 .chart-heading {
@@ -615,4 +614,9 @@ input:focus-visible {
         width: 100%;
         justify-content: space-between;
     }
+}
+button:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+    transform: none;
 }
