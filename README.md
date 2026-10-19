@@ -193,19 +193,6 @@ POWER-CABLE-V2/
 ### Web dashboard
 
 The web source is located in [`V2/Web`](V2/Web). For the embedded version, place the current web files in the firmware sketch's `data` folder and upload the LittleFS filesystem after uploading the firmware. Then join the `POWER-CABLE` Wi-Fi network and open `http://192.168.4.1`.
-
-> [!CAUTION]
-> POWER CABLE is a supervised research prototype, not certified fitness equipment. Test with conservative current and resistance limits, keep the emergency stop accessible and never operate the motor with an unsafe cable path.
-
-## 📊 Documentation and results
-
-- [Project documentation](docs)
-- [V2 documentation](V2/Documentation)
-- [Measurements](docs/Measurements)
-- [Method](docs/Method.pdf)
-- [Results](docs/Results.pdf)
-- [Short paper](docs/ShortPaper.pdf)
-
 ## 🧭 Limitations and next steps
 
 - Complete long-duration testing of the motor-control and communication paths
