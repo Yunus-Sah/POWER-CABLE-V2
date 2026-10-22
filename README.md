@@ -127,21 +127,21 @@ The interface recordings and physical training demonstrations play directly belo
 
 #### iOS application over Bluetooth
 
-IOS_INTERFACE_VIDEO_URL
+https://github.com/user-attachments/assets/fa846107-f319-498b-9fe8-2087e0723868
 
 #### Browser dashboard over local Wi-Fi
 
-WIFI_INTERFACE_VIDEO_URL
+https://github.com/user-attachments/assets/58c5c055-98a4-4e6f-a74a-664fd6e5d260
 
 ### Physical training demonstrations
 
 #### Training with the iOS application
 
-IOS_TRAINING_VIDEO_URL
+https://github.com/user-attachments/assets/26606b4b-3c01-4326-8d67-d80fb900bc9a
 
 #### Training with the Wi-Fi dashboard
 
-WIFI_TRAINING_VIDEO_URL
+https://github.com/user-attachments/assets/1191bdc3-c5ca-4ffb-ae1f-2a612f804cc4
 
 ## ✨ Current V2 functions
 
