@@ -121,28 +121,27 @@ Source: [`V2/Firmware`](V2/Firmware)
 <a id="prototype-in-action"></a>
 ## 🎥 Prototype in action
 
-The interfaces below were recorded during real training sessions. Select either screenshot to open the corresponding screen recording.
+The interface recordings and physical training demonstrations play directly below.
 
-<p align="center">
-  <a href="docs/media/demos/ios-app-recording.mp4">
-    <img src="docs/images/readme/ios-training-dashboard.png" alt="iOS application displaying live workout measurements" height="480">
-  </a>
-  &nbsp;&nbsp;
-  <a href="docs/media/demos/web-dashboard-recording.mov">
-    <img src="docs/images/readme/web-training-dashboard.png" alt="Wi-Fi dashboard displaying live workout measurements" height="480">
-  </a>
-</p>
+### Interface demonstrations
 
-<p align="center">
-  <strong>iOS app over Bluetooth</strong>
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <strong>Web dashboard over local Wi-Fi</strong>
-</p>
+#### iOS application over Bluetooth
 
-Physical prototype demonstrations:
+https://github.com/user-attachments/assets/fa846107-f319-498b-9fe8-2087e0723868
 
-- [Training with the iOS application](docs/media/demos/ios-training-demo.mp4)
-- [Training with the Wi-Fi dashboard](docs/media/demos/web-training-demo.mp4)
+#### Browser dashboard over local Wi-Fi
+
+https://github.com/user-attachments/assets/58c5c055-98a4-4e6f-a74a-664fd6e5d260
+
+### Physical training demonstrations
+
+#### Training with the iOS application
+
+https://github.com/user-attachments/assets/26606b4b-3c01-4326-8d67-d80fb900bc9a
+
+#### Training with the Wi-Fi dashboard
+
+https://github.com/user-attachments/assets/1191bdc3-c5ca-4ffb-ae1f-2a612f804cc4
 
 ## ✨ Current V2 functions
 
